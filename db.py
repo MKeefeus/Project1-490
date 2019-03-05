@@ -1,5 +1,6 @@
 import sqlite3
 import feedparser
+import Gui
 
 
 def main():
@@ -7,9 +8,9 @@ def main():
     c = conn.cursor()
     create_db(c)
     populate_db(c)
+    Gui.display_titles(c)
     conn.commit()
     conn.close()
-    #save me
 
 
 def create_db(c):
