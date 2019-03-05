@@ -8,6 +8,5 @@ def window():
     w.setWindowTitle("PyQt Test")
     w.show()
     sys.exit(app.exec_())
-    #save me
 window()
 
