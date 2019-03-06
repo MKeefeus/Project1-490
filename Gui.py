@@ -1,13 +1,13 @@
 import sys
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QTextEdit
 
 
 def window(data):
     app = QApplication(sys.argv)
-    test = QtWidgets.QTextEdit()
+    test = QTextEdit()
     for thing in data:
-        QtWidgets.QTextEdit.insertHtml(test, "%s<br />" %str(thing))
+        QTextEdit.insertHtml(test, ("%s<br />" % str(thing)))
     test.setReadOnly(True)
     w = QWidget()
     layout = QVBoxLayout()
