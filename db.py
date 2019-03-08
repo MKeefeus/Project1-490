@@ -9,8 +9,8 @@ def main():
     create_db(c)
     populate_db(c)
     Gui.display_titles(c)
-    c.close()
     conn.commit()
+    c.close()
     conn.close()
 
 
