@@ -11,7 +11,7 @@ def window(data):
     db_table.setColumnWidth(0 , 500)
     increment_row = 0
     for titles in data:
-        name = objects[0]
+        name = titles[0]
         db_table.setItem(increment_row, 0, QTableWidgetItem(name))
         increment_row += 1
     title_text = QTextEdit()
