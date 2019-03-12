@@ -14,28 +14,19 @@ class LoadOptions(QMainWindow):
         self.setWindowTitle("Load options")
 
         self.refresh_button = QPushButton('Clear and reload database', self)
-        self.refresh_button.clicked.connect(self.loading_message)
         self.refresh_button.clicked.connect(self.refresh)
         self.refresh_button.resize(200, 32)
         self.refresh_button.move(50, 50)
 
         self.load_button = QPushButton('Load database', self)
-        self.load_button.clicked.connect(self.loading_message)
         self.load_button.clicked.connect(self.load)
         self.load_button.resize(200, 32)
         self.load_button.move(50, 90)
 
         self.update_button = QPushButton('Update database', self)
-        self.update_button.clicked.connect(self.loading_message)
         self.update_button.clicked.connect(self.update_selection)
         self.update_button.resize(200, 32)
         self.update_button.move(50, 130)
-
-    def loading_message(self):
-        self.refresh_button.setEnabled(False)
-        self.refresh_button.setText('Loading')
-        self.load_button.hide()
-        self.update_button.hide()
 
     def update_selection(self):
         connection = sqlite3.connect('jobs.db')
@@ -203,16 +194,33 @@ class MainWindow(QMainWindow):
         self.db_table = QTableWidget(self)
         self.db_table.setRowCount(1000)
         self.db_table.setColumnCount(8)
-        self.db_table.move(0, 0)
-        self.db_table.resize(1920, 1080)
+        self.db_table.move(0, 25)
+        self.db_table.resize(1600, 900)
         self.db_table.setHorizontalHeaderLabels(["Titles", "Tags", "Author", "Date Published", "Description",
                                                 "Location", "Links", "Allows Remote"])
-        self.fill_table(cursor)
+        job_list = self.create_entries(cursor)
         self.db_table.cellDoubleClicked.connect(self.open_entry)
         self.entry_window = EntryWindow()
 
-    def open_entry(self, row, column):
+        self.menu_bar = self.menuBar()
+        self.file_menu = self.menu_bar.addMenu('File')
+        exit_button = QAction('Exit', self)
+        exit_button.triggered.connect(self.exit_action)
+        self.file_menu.addAction(exit_button)
 
+        self.search_menu = self.menu_bar.addMenu('Search')
+        search_button = QAction('Search', self)
+        search_button.triggered.connect(self.search_action)
+        self.search_window = SearchWindow(job_list)
+        self.search_menu.addAction(search_button)
+
+    def exit_action(self):
+        self.close()
+
+    def search_action(self):
+        self.search_window.show()
+
+    def open_entry(self, row, column):
         for i in reversed(range(self.entry_window.layout.count())):
             self.entry_window.layout.itemAt(i).widget().setParent(None)
         cell = self.db_table.item(row, 0)
@@ -260,20 +268,36 @@ class MainWindow(QMainWindow):
 
         self.entry_window.show()
 
-    def fill_table(self, cursor):
+    def create_entries(self, cursor):
+        entry_list = []
+        cursor.execute("""SELECT COUNT(*) FROM jobs""")
+        result = cursor.fetchone()
+        entries_length = int(result[0])
         titles = cursor.execute("""SELECT title FROM jobs""")
-        increment_row = 0
-        for title in titles:
-            curr_title = title[0]
-            self.db_table.setItem(increment_row, 0, QTableWidgetItem(curr_title))
-            increment_row += 1
-        self.db_table.setColumnWidth(0, 500)
-        increment_row = 0
+        titles_list = titles.fetchall()
         tags = cursor.execute("""SELECT tags FROM jobs""")
-        for tag in tags:
-            curr_tag = tag[0]
-            if curr_tag == "none":
-                self.db_table.setItem(increment_row, 1, QTableWidgetItem(curr_tag))
+        tags_list = tags.fetchall()
+        authors = cursor.execute("""SELECT author FROM jobs""")
+        author_list = authors.fetchall()
+        dates = cursor.execute("""SELECT date_published FROM jobs""")
+        date_list = dates.fetchall()
+        descriptions = cursor.execute("""SELECT description FROM jobs""")
+        description_list = descriptions.fetchall()
+        locations = cursor.execute("""SELECT location FROM jobs""")
+        location_list = locations.fetchall()
+        links = cursor.execute("""SELECT links FROM jobs""")
+        links_list = links.fetchall()
+        remotes = cursor.execute("""SELECT allows_remote FROM jobs""")
+        remote_list = remotes.fetchall()
+        for entry in range(entries_length):
+            job_entry = JobEntry()
+            entry_list.append(job_entry)
+
+            job_entry.set_title(titles_list[entry][0])
+
+            curr_tag = str(tags_list[entry])
+            if curr_tag == "('none',)":
+                job_entry.set_tags("None")
             else:
                 output = re.findall(r"'term': '(.*?)'", curr_tag)
                 final_string = ""
@@ -281,50 +305,55 @@ class MainWindow(QMainWindow):
                     final_string += output[i]
                     final_string += ", "
                 final_string = final_string[:-2]
-                self.db_table.setItem(increment_row, 1, QTableWidgetItem(final_string))
-            increment_row += 1
-        self.db_table.setColumnWidth(1, 500)
-        increment_row = 0
-        authors = cursor.execute("""SELECT author FROM jobs""")
-        for author in authors:
-            curr_author = author[0]
-            self.db_table.setItem(increment_row, 2, QTableWidgetItem(curr_author))
-            increment_row += 1
-        increment_row = 0
-        dates = cursor.execute("""SELECT date_published FROM jobs""")
-        for date in dates:
-            curr_date = date[0]
-            date_str = curr_date
-            date_str = date_str[:-1]
-            self.db_table.setItem(increment_row, 3, QTableWidgetItem(date_str))
-            increment_row += 1
-        increment_row = 0
-        descriptions = cursor.execute("""SELECT description FROM jobs""")
-        for description in descriptions:
+                job_entry.set_tags(final_string)
+
+            job_entry.set_author(author_list[entry][0])
+
+            job_entry.set_date(date_list[entry][0])
+
             curr_description = QTextEdit()
-            curr_description.setText(description[0])
+            curr_description.setText(str(description_list[entry]))
             final_description = curr_description.toPlainText()
-            self.db_table.setItem(increment_row, 4, QTableWidgetItem(final_description))
-            increment_row += 1
-        increment_row = 0
-        locations = cursor.execute("""SELECT location FROM jobs""")
-        for location in locations:
-            curr_location = location[0]
-            self.db_table.setItem(increment_row, 5, QTableWidgetItem(curr_location))
-            increment_row += 1
+            final_description = final_description[3:-3]
+            job_entry.set_description(final_description)
+
+            location_string = str(location_list[entry])
+            location_string = location_string[2:-3]
+            if location_string == "None":
+                job_entry.set_city("None")
+                job_entry.set_state('')
+            elif ',' in location_string:
+                location_split = location_string.split(',')
+                job_entry.set_city(location_split[0])
+                job_entry.set_state(location_split[1])
+            else:
+                job_entry.set_city(location_string)
+                job_entry.set_state('')
+
+            curr_link = str(links_list[entry])
+            link_text = re.findall(r"'href': '(.*?)'", curr_link)
+            job_entry.set_links(link_text)
+
+            job_entry.set_remote(remote_list[entry][0])
+
+        self.fill_table(entry_list)
+        return entry_list
+
+    def fill_table(self, entry_list):
+        self.db_table.setColumnWidth(0, 500)
+        self.db_table.setColumnWidth(1, 500)
         self.db_table.setColumnWidth(4, 225)
         increment_row = 0
-        links = cursor.execute("""SELECT links FROM jobs""")
-        for link in links:
-            curr_link = link[0]
-            link_text = re.findall(r"'href': '(.*?)'", curr_link)
-            self.db_table.setItem(increment_row, 6, QTableWidgetItem(link_text[0]))
-            increment_row += 1
-        increment_row = 0
-        remotes = cursor.execute("""SELECT allows_remote FROM jobs""")
-        for remote in remotes:
-            curr_remote = remote[0]
-            self.db_table.setItem(increment_row, 7, QTableWidgetItem(curr_remote))
+        for entry in entry_list:
+            self.db_table.setItem(increment_row, 0, QTableWidgetItem(entry.title))
+            self.db_table.setItem(increment_row, 1, QTableWidgetItem(entry.tags))
+            self.db_table.setItem(increment_row, 2, QTableWidgetItem(entry.author))
+            self.db_table.setItem(increment_row, 3, QTableWidgetItem(entry.date_published))
+            self.db_table.setItem(increment_row, 4, QTableWidgetItem(entry.description))
+            self.db_table.setItem(increment_row, 5, QTableWidgetItem(entry.city + ", " + entry.state))
+            for link in entry.links:
+                self.db_table.setItem(increment_row, 6, QTableWidgetItem(link))
+            self.db_table.setItem(increment_row, 7, QTableWidgetItem(entry.allows_remote))
             increment_row += 1
 
 
@@ -333,6 +362,189 @@ class EntryWindow(QWidget):
         super(EntryWindow, self).__init__()
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
+
+
+class SearchWindow(QWidget):
+    def __init__(self, job_list):
+        super(SearchWindow, self).__init__()
+        self.job_list = job_list
+        self.setWindowTitle('Search')
+        self.layout = QVBoxLayout()
+
+        self.instructions = QLabel()
+        self.instructions.setText("Separate search items by commas")
+        self.layout.addWidget(self.instructions)
+
+        self.titles_to_search = QLineEdit()
+        self.titles_to_search.setPlaceholderText("Titles")
+        self.layout.addWidget(self.titles_to_search)
+
+        self.tags_to_search = QLineEdit()
+        self.tags_to_search.setPlaceholderText("Tags")
+        self.layout.addWidget(self.tags_to_search)
+
+        self.authors_to_search = QLineEdit()
+        self.authors_to_search.setPlaceholderText("Authors")
+        self.layout.addWidget(self.authors_to_search)
+
+        self.cities_to_search = QLineEdit()
+        self.cities_to_search.setPlaceholderText("Cities")
+        self.layout.addWidget(self.cities_to_search)
+
+        self.states_to_search = QLineEdit()
+        self.states_to_search.setPlaceholderText("States or Country if outside of US (I.E. MA)")
+        self.layout.addWidget(self.states_to_search)
+
+        self.remote_to_search = QCheckBox()
+        self.remote_to_search.setText("Allows remote? (leave unchecked for either)")
+        self.layout.addWidget(self.remote_to_search)
+
+        self.search_for_all = QCheckBox()
+        self.search_for_all.setText("Search for jobs with all criteria rather then any")
+        self.layout.addWidget(self.search_for_all)
+
+        self.search_button = QPushButton()
+        self.search_button.setText("Search")
+        self.search_button.clicked.connect(self.search)
+        self.layout.addWidget(self.search_button)
+
+        self.setLayout(self.layout)
+
+    def search(self):
+
+        titles_string = self.titles_to_search.text()
+        titles_list = [title.strip() for title in titles_string.split(',')]
+
+        tags_string = self.tags_to_search.text()
+        tags_list = [tag.strip() for tag in tags_string.split(',')]
+
+        authors_string = self.authors_to_search.text()
+        authors_list = [authors.strip() for authors in authors_string.split(',')]
+
+        cities_string = self.cities_to_search.text()
+        cities_list = [cities.strip() for cities in cities_string.split(',')]
+
+        states_string = self.states_to_search.text()
+        states_list = [states.strip() for states in states_string.split(',')]
+
+        if self.search_for_all.isChecked():
+            None
+        else:
+            search_list = []
+            for entry in self.job_list:
+                if str(titles_list) != "['']":
+                    for title in titles_list:
+                        if title in entry.title:
+                            if entry not in search_list:
+                                search_list.append(entry)
+                                print(entry.title)
+                if str(tags_list) != "['']":
+                    for tag in tags_list:
+                        if tag in entry.tags:
+                            if entry not in search_list:
+                                search_list.append(entry)
+                if str(authors_list) != "['']":
+                    for author in authors_list:
+                        if author in entry.author:
+                            if entry not in search_list:
+                                search_list.append(entry)
+                if str(cities_list) != "['']":
+                    for city in cities_list:
+                        if city in entry.city:
+                            if entry not in search_list:
+                                search_list.append(entry)
+                if str(states_list) != "['']":
+                    for state in states_list:
+                        if state in entry.state:
+                            if entry not in search_list:
+                                search_list.append(entry)
+                if self.remote_to_search.isChecked():
+                    if entry.allows_remote:
+                        if entry not in search_list:
+                            search_list.append(entry)
+            self.results_table = SearchTable()
+            self.show_table()
+            self.results_table.fill_table(search_list)
+
+    def show_table(self):
+        self.results_table.show()
+
+
+
+
+class JobEntry:
+    def __init__(self):
+        self.title = None
+        self.tags = None
+        self.author = None
+        self.date_published = None
+        self.description = None
+        self.city = None
+        self.state = None
+        self.links = None
+        self.allows_remote = None
+
+    def set_title(self, title):
+        self.title = title
+
+    def set_tags(self, tags):
+        self.tags = tags
+
+    def set_author(self, author):
+        self.author = author
+
+    def set_date(self, date_published):
+        self.date_published = date_published
+
+    def set_description(self, description):
+        self.description = description
+
+    def set_city(self, city):
+        self.city = city
+
+    def set_state(self, state):
+        self.state = state
+
+    def set_links(self, links):
+        self.links = links
+
+    def set_remote(self, allows_remote):
+        self.allows_remote = allows_remote
+
+
+class SearchTable(QWidget):
+    def __init__(self):
+        super(SearchTable, self).__init__()
+        self.layout = QVBoxLayout()
+        self.table = QTableWidget()
+        self.layout.addWidget(self.table)
+        self.setLayout(self.layout)
+        self.setup_table()
+        self.setMinimumSize(800,400)
+
+    def setup_table(self):
+        self.table.setColumnCount(8)
+        self.table.setHorizontalHeaderLabels(["Titles", "Tags", "Author", "Date Published", "Description",
+                                              "Location", "Links", "Allows Remote"])
+        self.table.setColumnWidth(0, 500)
+        self.table.setColumnWidth(1, 500)
+        self.table.setColumnWidth(4, 225)
+
+    def fill_table(self, search_list):
+        self.table.setRowCount(len(search_list))
+        increment_row = 0
+        for entry in search_list:
+            self.table.setItem(increment_row, 0, QTableWidgetItem(entry.title))
+            self.table.setItem(increment_row, 1, QTableWidgetItem(entry.tags))
+            self.table.setItem(increment_row, 2, QTableWidgetItem(entry.author))
+            self.table.setItem(increment_row, 3, QTableWidgetItem(entry.date_published))
+            self.table.setItem(increment_row, 4, QTableWidgetItem(entry.description))
+            self.table.setItem(increment_row, 5, QTableWidgetItem(entry.city + ", " + entry.state))
+            for link in entry.links:
+                self.table.setItem(increment_row, 6, QTableWidgetItem(link))
+            self.table.setItem(increment_row, 7, QTableWidgetItem(entry.allows_remote))
+            increment_row += 1
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
