@@ -400,7 +400,7 @@ class SearchWindow(QWidget):
         self.layout.addWidget(self.remote_to_search)
 
         self.search_for_all = QCheckBox()
-        self.search_for_all.setText("Search for jobs with all criteria rather then any")
+        self.search_for_all.setText("LEAVE UNCHECKED ran out of time")
         self.layout.addWidget(self.search_for_all)
 
         self.search_button = QPushButton()
@@ -412,19 +412,19 @@ class SearchWindow(QWidget):
 
     def search(self):
 
-        titles_string = self.titles_to_search.text()
+        titles_string = self.titles_to_search.text().lower()
         titles_list = [title.strip() for title in titles_string.split(',')]
 
-        tags_string = self.tags_to_search.text()
+        tags_string = self.tags_to_search.text().lower()
         tags_list = [tag.strip() for tag in tags_string.split(',')]
 
-        authors_string = self.authors_to_search.text()
+        authors_string = self.authors_to_search.text().lower()
         authors_list = [authors.strip() for authors in authors_string.split(',')]
 
-        cities_string = self.cities_to_search.text()
+        cities_string = self.cities_to_search.text().lower()
         cities_list = [cities.strip() for cities in cities_string.split(',')]
 
-        states_string = self.states_to_search.text()
+        states_string = self.states_to_search.text().lower()
         states_list = [states.strip() for states in states_string.split(',')]
 
         if self.search_for_all.isChecked():
@@ -434,28 +434,27 @@ class SearchWindow(QWidget):
             for entry in self.job_list:
                 if str(titles_list) != "['']":
                     for title in titles_list:
-                        if title in entry.title:
+                        if title in entry.title.lower():
                             if entry not in search_list:
                                 search_list.append(entry)
-                                print(entry.title)
                 if str(tags_list) != "['']":
                     for tag in tags_list:
-                        if tag in entry.tags:
+                        if tag in entry.tags.lower():
                             if entry not in search_list:
                                 search_list.append(entry)
                 if str(authors_list) != "['']":
                     for author in authors_list:
-                        if author in entry.author:
+                        if author in entry.author.lower():
                             if entry not in search_list:
                                 search_list.append(entry)
                 if str(cities_list) != "['']":
                     for city in cities_list:
-                        if city in entry.city:
+                        if city in entry.city.lower():
                             if entry not in search_list:
                                 search_list.append(entry)
                 if str(states_list) != "['']":
                     for state in states_list:
-                        if state in entry.state:
+                        if state in entry.state.lower():
                             if entry not in search_list:
                                 search_list.append(entry)
                 if self.remote_to_search.isChecked():
